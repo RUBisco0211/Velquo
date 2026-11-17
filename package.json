@@ -8,7 +8,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "bun check && vite build",
+        "build": "tsc --noEmit && bun run i18n:check && vite build",
         "lint": "eslint --fix . && cargo fmt --manifest-path src-tauri/Cargo.toml && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings",
         "preview": "vite preview",
         "tauri": "tauri",
