@@ -128,6 +128,7 @@ impl KdeConnectDaemon {
                         sync_notifications: rec.sync_notifications,
                         auto_copy_otp: rec.auto_copy_otp,
                         pause_media_on_calls: rec.pause_media_on_calls,
+                        notify_incoming_files: rec.notify_incoming_files,
                         save_location: device_save_loc,
                         notifications: Vec::new(),
                         run_commands: rec.run_commands.clone(),
@@ -201,6 +202,50 @@ impl KdeConnectDaemon {
                 dismissable,
             );
         }
+    }
+
+    /// Reports a finished incoming file transfer, honouring the per-device
+    /// "notify on incoming files" switch. `saved_path` is `None` when the
+    /// transfer failed.
+    pub fn notify_incoming_file(
+        &self,
+        device_id: &str,
+        device_name: &str,
+        filename: &str,
+        saved_path: Option<&str>,
+    ) {
+        let from_devices = self.devices.lock().ok().and_then(|devices| {
+            devices
+                .get(device_id)
+                .map(|entry| entry.view.notify_incoming_files)
+        });
+        let enabled = match from_devices {
+            Some(enabled) => enabled,
+            None => self
+                .trusted_devices
+                .lock()
+                .ok()
+                .and_then(|trusted| trusted.get(device_id).map(|rec| rec.notify_incoming_files))
+                .unwrap_or(true),
+        };
+        if !enabled {
+            log::debug!(
+                "[share-in] Incoming-file notifications disabled for '{}' ({})",
+                device_name,
+                device_id
+            );
+            return;
+        }
+
+        #[cfg(target_os = "macos")]
+        crate::macos_notify::show_incoming_file_notification(
+            device_id,
+            device_name,
+            filename,
+            saved_path,
+        );
+        #[cfg(not(target_os = "macos"))]
+        let _ = (device_id, device_name, filename, saved_path);
     }
 
     pub fn remove_macos_notifications(device_id: &str, notification_ids: &[String]) {

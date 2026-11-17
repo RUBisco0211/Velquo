@@ -31,6 +31,8 @@ interface DevicePageProps {
     onToggleAutoCopyOtp: () => void;
     pauseMediaOnCalls: boolean;
     onTogglePauseMediaOnCalls: () => void;
+    notifyIncomingFiles: boolean;
+    onToggleNotifyIncomingFiles: () => void;
     onAddRunCommand: (name: string, command: string) => Promise<void>;
     onRemoveRunCommand: (key: string) => Promise<void>;
     rightPaneContainer: HTMLElement | null;
@@ -67,6 +69,7 @@ export function DevicePage({
     onRemoveRunCommand,
     rightPaneContainer,
     onToggleAutoCopyOtp,
+    notifyIncomingFiles,
     openAddCommandSignal,
     onToggleSyncClipboard,
     onToggleNotifications,
@@ -74,6 +77,7 @@ export function DevicePage({
     onChangeFileSaveLocation,
     onConsumeAddCommandSignal,
     onTogglePauseMediaOnCalls,
+    onToggleNotifyIncomingFiles,
 }: DevicePageProps) {
     const { t } = useTranslation();
     const isSettingsOpen = subview == "settings";
@@ -191,6 +195,8 @@ export function DevicePage({
                         onToggleAutoCopyOtp={onToggleAutoCopyOtp}
                         pauseMediaOnCalls={pauseMediaOnCalls}
                         onTogglePauseMediaOnCalls={onTogglePauseMediaOnCalls}
+                        notifyIncomingFiles={notifyIncomingFiles}
+                        onToggleNotifyIncomingFiles={onToggleNotifyIncomingFiles}
                         runCommands={device.runCommands || []}
                         onAddRunCommand={onAddRunCommand}
                         onRemoveRunCommand={onRemoveRunCommand}

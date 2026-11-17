@@ -4,9 +4,9 @@ use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool, NSObjectProtocol, ProtocolObject};
 use objc2::{define_class, msg_send, AllocAnyThread, MainThreadOnly};
-use objc2_app_kit::{NSApplication, NSImage};
+use objc2_app_kit::{NSApplication, NSImage, NSWorkspace};
 use objc2_foundation::{
-    MainThreadMarker, NSArray, NSData, NSDictionary, NSError, NSObject, NSSet, NSString,
+    MainThreadMarker, NSArray, NSData, NSDictionary, NSError, NSObject, NSSet, NSString, NSURL,
 };
 use objc2_user_notifications::{
     UNAuthorizationOptions, UNMutableNotificationContent, UNNotification, UNNotificationAction,
@@ -78,7 +78,14 @@ fn should_suppress_notification(content: &objc2_user_notifications::UNNotificati
     let Some(device_id) = user_info_string(content, "deviceId") else {
         return false;
     };
-    if user_info_string(content, "notificationId").is_none() || !main_window_is_focused() {
+    // Only suppress notifications that the in-app UI already covers: the device
+    // notification list, and the transfer list for received files.
+    if user_info_string(content, "notificationId").is_none()
+        && user_info_string(content, "incomingFile").is_none()
+    {
+        return false;
+    }
+    if !main_window_is_focused() {
         return false;
     }
 
@@ -139,7 +146,9 @@ define_class!(
                         .dismiss_device_notification(&device_id, &notification_id);
                 }
             } else if action_id == unsafe { UNNotificationDefaultActionIdentifier.to_string() } {
-                if let Some(ctx) = NOTIFY_CTX.get() {
+                if let Some(file_path) = user_info_string(&content, "filePath") {
+                    reveal_in_finder(&file_path);
+                } else if let Some(ctx) = NOTIFY_CTX.get() {
                     open_main_window(&ctx.app);
                     if let Some(device_id) = device_id {
                         let _ = ctx.app.emit(
@@ -292,6 +301,82 @@ pub fn show_macos_notification(
     notification_id: Option<&str>,
     dismissable: bool,
 ) {
+    let raw_id = notification_id.map(str::to_string);
+    let normalized_id = notification_id.map(KdeConnectDaemon::normalize_notif_id);
+
+    let mut extra: Vec<(&str, &str)> = Vec::new();
+    if let Some(raw_id) = raw_id.as_deref() {
+        extra.push(("notificationId", raw_id));
+    }
+
+    let identifier = match (device_id, normalized_id.as_deref()) {
+        (Some(device_id), Some(normalized_id)) if !normalized_id.is_empty() => {
+            format!("{}:{}", device_id, normalized_id)
+        }
+        _ => format!("velquo-{}", Uuid::new_v4()),
+    };
+    let category = if dismissable && raw_id.is_some() {
+        Some(NOTIFICATION_CATEGORY)
+    } else {
+        None
+    };
+
+    deliver_notification(
+        title,
+        subtitle,
+        body,
+        device_id,
+        &extra,
+        category,
+        &identifier,
+    );
+}
+
+/// Announces a finished (or failed) incoming file transfer. Clicking the banner
+/// reveals the saved file in Finder; a failed transfer has nothing to reveal, so
+/// the click falls back to the regular "open the app" behaviour.
+pub fn show_incoming_file_notification(
+    device_id: &str,
+    device_name: &str,
+    filename: &str,
+    saved_path: Option<&str>,
+) {
+    let title = match saved_path {
+        Some(_) => crate::i18n::tr_current("native.notification.fileReceivedTitle"),
+        None => crate::i18n::tr_current("native.notification.fileReceiveFailedTitle"),
+    };
+
+    let mut extra: Vec<(&str, &str)> = vec![("incomingFile", "1")];
+    if let Some(saved_path) = saved_path {
+        extra.push(("filePath", saved_path));
+    }
+
+    deliver_notification(
+        &title,
+        Some(device_name),
+        filename,
+        Some(device_id),
+        &extra,
+        None,
+        &format!("velquo-file-{}", Uuid::new_v4()),
+    );
+}
+
+fn reveal_in_finder(path: &str) {
+    let url = NSURL::fileURLWithPath(&NSString::from_str(path));
+    let urls = NSArray::from_slice(&[&*url]);
+    NSWorkspace::sharedWorkspace().activateFileViewerSelectingURLs(&urls);
+}
+
+fn deliver_notification(
+    title: &str,
+    subtitle: Option<&str>,
+    body: &str,
+    device_id: Option<&str>,
+    extra_user_info: &[(&str, &str)],
+    category: Option<&str>,
+    identifier: &str,
+) {
     if !NOTIFICATIONS_AVAILABLE.load(Ordering::Acquire)
         || !NOTIFICATIONS_AUTHORIZED.load(Ordering::Acquire)
     {
@@ -310,20 +395,22 @@ pub fn show_macos_notification(
     let sound = UNNotificationSound::soundNamed(&NSString::from_str("Glass"));
     content.setSound(Some(&sound));
 
-    let raw_id = notification_id.map(str::to_string);
-    let normalized_id = notification_id.map(KdeConnectDaemon::normalize_notif_id);
+    let mut keys: Vec<Retained<NSString>> = Vec::new();
+    let mut values: Vec<Retained<NSString>> = Vec::new();
+    if let Some(device_id) = device_id {
+        keys.push(NSString::from_str("deviceId"));
+        values.push(NSString::from_str(device_id));
+    }
+    for (key, value) in extra_user_info {
+        keys.push(NSString::from_str(key));
+        values.push(NSString::from_str(value));
+    }
 
-    if device_id.is_some() || raw_id.is_some() {
-        let device_key = NSString::from_str("deviceId");
-        let notification_key = NSString::from_str("notificationId");
-        let device_value = NSString::from_str(device_id.unwrap_or(""));
-        let notification_value = NSString::from_str(raw_id.as_deref().unwrap_or(""));
-        let device_object: &AnyObject = &device_value;
-        let notification_object: &AnyObject = &notification_value;
-        let user_info = NSDictionary::from_slices(
-            &[&*device_key, &*notification_key],
-            &[device_object, notification_object],
-        );
+    if !keys.is_empty() {
+        let key_refs: Vec<&NSString> = keys.iter().map(|key| &**key).collect();
+        let value_refs: Vec<&AnyObject> =
+            values.iter().map(|value| &**value as &AnyObject).collect();
+        let user_info = NSDictionary::from_slices(&key_refs, &value_refs);
         // `setUserInfo` takes the erased `NSDictionary` type, while `from_slices`
         // returns a concretely-typed dictionary. The runtime object is identical.
         let user_info_untyped = unsafe {
@@ -334,18 +421,12 @@ pub fn show_macos_notification(
         }
     }
 
-    if dismissable && raw_id.is_some() {
-        content.setCategoryIdentifier(&NSString::from_str(NOTIFICATION_CATEGORY));
+    if let Some(category) = category {
+        content.setCategoryIdentifier(&NSString::from_str(category));
     }
 
-    let identifier = match (device_id, normalized_id.as_deref()) {
-        (Some(device_id), Some(normalized_id)) if !normalized_id.is_empty() => {
-            format!("{}:{}", device_id, normalized_id)
-        }
-        _ => format!("velquo-{}", Uuid::new_v4()),
-    };
     let request = UNNotificationRequest::requestWithIdentifier_content_trigger(
-        &NSString::from_str(&identifier),
+        &NSString::from_str(identifier),
         &content,
         None,
     );

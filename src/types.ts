@@ -84,6 +84,7 @@ export interface DeviceView {
     syncNotifications: boolean;
     autoCopyOtp: boolean;
     pauseMediaOnCalls: boolean;
+    notifyIncomingFiles: boolean;
     saveLocation: string;
     notifications: PhoneNotification[];
     runCommands: RunCommandItem[];

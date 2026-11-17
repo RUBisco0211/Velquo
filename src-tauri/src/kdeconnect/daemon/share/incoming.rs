@@ -71,6 +71,7 @@ impl KdeConnectDaemon {
             let daemon = Arc::clone(self);
             let dev_id = device_id.to_string();
             let dev_name = device_name.to_string();
+            let notify_name = clean_name.clone();
             tokio::spawn(async move {
                 match daemon
                     .download_payload_file(
@@ -86,17 +87,25 @@ impl KdeConnectDaemon {
                 {
                     Ok(saved) => {
                         log::info!("[share-in] Completed file download from '{}'", dev_name);
+                        let saved_str = saved.to_string_lossy().to_string();
                         daemon.finish_transfer(
                             &transfer_id,
                             "Completed",
-                            Some(saved.to_string_lossy().to_string()),
+                            Some(saved_str.clone()),
                             None,
+                        );
+                        daemon.notify_incoming_file(
+                            &dev_id,
+                            &dev_name,
+                            &notify_name,
+                            Some(&saved_str),
                         );
                     }
                     Err(e) => {
                         let _ = tokio::fs::remove_file(&dest_path).await;
                         log::error!("[share-in] File download failed: {:?}", e);
                         daemon.finish_transfer(&transfer_id, "Failed", None, Some(e.to_string()));
+                        daemon.notify_incoming_file(&dev_id, &dev_name, &notify_name, None);
                     }
                 }
             });
