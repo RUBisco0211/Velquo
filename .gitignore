@@ -249,3 +249,4 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/node,typescript,windows,linux,macos,rust,react
 
 src-tauri/gen
+.pi
