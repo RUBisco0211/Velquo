@@ -220,7 +220,7 @@ pub fn init_macos_notifications(app: AppHandle, daemon: Arc<KdeConnectDaemon>) {
 
     if !is_running_from_app_bundle() {
         log::warn!(
-            "[macos-notify] UserNotifications require a bundled .app. Notifications are disabled for this unbundled dev binary. Launch a bundled debug/release build to test notifications."
+            "[macos-notify] UserNotifications require a bundled .app, so notifications are disabled for this unbundled dev binary and the app never shows up under System Settings > Notifications. Run `bun run bundle:debug` and open src-tauri/target/debug/bundle/macos/Velquo.app to test notifications."
         );
         return;
     }
@@ -368,6 +368,50 @@ fn reveal_in_finder(path: &str) {
     NSWorkspace::sharedWorkspace().activateFileViewerSelectingURLs(&urls);
 }
 
+/// Dev-only escape hatch: unbundled binaries have no `Bundle.main`, so macOS
+/// refuses to deliver through `UNUserNotificationCenter`. Bouncing the banner
+/// through AppleScript keeps the notification code path observable while
+/// running `tauri dev`. The banner is posted by `osascript`, so clicking it does
+/// nothing and it does not appear under Velquo in System Settings.
+fn deliver_unbundled_fallback(title: &str, subtitle: Option<&str>, body: &str) {
+    log::info!(
+        "[macos-notify] (unbundled dev fallback) {} — {}: {}",
+        title,
+        subtitle.unwrap_or(""),
+        body
+    );
+
+    let mut script = format!(
+        "display notification \"{}\" with title \"{}\"",
+        applescript_escape(body),
+        applescript_escape(title)
+    );
+    if let Some(subtitle) = subtitle.filter(|value| !value.is_empty()) {
+        script.push_str(&format!(" subtitle \"{}\"", applescript_escape(subtitle)));
+    }
+
+    // `output()` reaps the child, and the thread keeps the caller (often a
+    // notification callback on the main thread) from blocking on osascript.
+    std::thread::spawn(move || {
+        match std::process::Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .output()
+        {
+            Ok(output) if !output.status.success() => log::warn!(
+                "[macos-notify] osascript fallback failed: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ),
+            Ok(_) => {}
+            Err(e) => log::warn!("[macos-notify] Could not run osascript: {}", e),
+        }
+    });
+}
+
+fn applescript_escape(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 fn deliver_notification(
     title: &str,
     subtitle: Option<&str>,
@@ -377,9 +421,11 @@ fn deliver_notification(
     category: Option<&str>,
     identifier: &str,
 ) {
-    if !NOTIFICATIONS_AVAILABLE.load(Ordering::Acquire)
-        || !NOTIFICATIONS_AUTHORIZED.load(Ordering::Acquire)
-    {
+    if !NOTIFICATIONS_AVAILABLE.load(Ordering::Acquire) {
+        deliver_unbundled_fallback(title, subtitle, body);
+        return;
+    }
+    if !NOTIFICATIONS_AUTHORIZED.load(Ordering::Acquire) {
         return;
     }
 

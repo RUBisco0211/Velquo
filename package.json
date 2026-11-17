@@ -13,6 +13,7 @@
         "preview": "vite preview",
         "tauri": "tauri",
         "bundle": "tauri build --bundles app,dmg",
+        "bundle:debug": "tauri build --debug --bundles app --config '{\"bundle\":{\"createUpdaterArtifacts\":false}}'",
         "icons": "bun run scripts/icons-generate.ts",
         "i18n:check": "bun run scripts/i18n-check.ts",
         "cover": "bun run scripts/generate-cover.ts"
