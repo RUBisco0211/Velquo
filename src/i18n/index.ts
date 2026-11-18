@@ -33,9 +33,9 @@ const LANGUAGE_PREFERENCE_STORAGE_KEY = "velquo.language";
  * own script so that a user who cannot read the current UI language can still
  * find their language. */
 export const LOCALE_LABELS: Record<Locale, string> = {
-    en: "English",
     ja: "日本語",
     ko: "한국어",
+    en: "English",
     "zh-Hans": "简体中文",
     "zh-Hant": "繁體中文",
 };
