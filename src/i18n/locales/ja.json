@@ -117,6 +117,7 @@
         "syncNotifications": "通知を同期",
         "autoCopyOtp": "OTPを自動コピー",
         "pauseMediaOnCalls": "通話時にメディアを一時停止",
+        "notifyIncomingFiles": "ファイル受信時に通知",
         "unpair": "ペアリング解除"
     },
     "files": {
@@ -184,7 +185,9 @@
             "files": "{{device}} — ファイル"
         },
         "notification": {
-            "dismiss": "閉じる"
+            "dismiss": "閉じる",
+            "fileReceivedTitle": "ファイルを受信しました",
+            "fileReceiveFailedTitle": "ファイル転送に失敗しました"
         }
     },
     "homebrew": {

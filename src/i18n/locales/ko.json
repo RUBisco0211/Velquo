@@ -117,6 +117,7 @@
         "syncNotifications": "알림 동기화",
         "autoCopyOtp": "OTP 자동 복사",
         "pauseMediaOnCalls": "통화 중 미디어 일시정지",
+        "notifyIncomingFiles": "파일 수신 시 알림",
         "unpair": "페어링 해제"
     },
     "files": {
@@ -184,7 +185,9 @@
             "files": "{{device}} — 파일"
         },
         "notification": {
-            "dismiss": "닫기"
+            "dismiss": "닫기",
+            "fileReceivedTitle": "파일을 받았습니다",
+            "fileReceiveFailedTitle": "파일 전송 실패"
         }
     },
     "homebrew": {
