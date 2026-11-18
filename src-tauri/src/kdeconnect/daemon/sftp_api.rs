@@ -176,6 +176,7 @@ mod tests {
             sync_notifications: true,
             auto_copy_otp: true,
             pause_media_on_calls: true,
+            notify_incoming_files: true,
             save_location: None,
             run_commands: Vec::new(),
             ssh_host_key_fingerprint: fingerprint.map(str::to_string),

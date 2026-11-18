@@ -311,6 +311,22 @@ fn set_device_pause_media_on_calls(
 }
 
 #[tauri::command]
+fn set_device_notify_incoming_files(
+    device_id: String,
+    enabled: bool,
+    daemon: State<'_, Arc<KdeConnectDaemon>>,
+) -> Result<(), String> {
+    log::info!(
+        "[ui] Setting notify_incoming_files={} for device_id={}",
+        enabled,
+        device_id
+    );
+    daemon
+        .set_device_notify_incoming_files(&device_id, enabled)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn dismiss_notification(
     device_id: String,
     notification_id: String,
@@ -1369,6 +1385,7 @@ pub fn run() {
             set_device_notifications_sync,
             set_device_auto_copy_otp,
             set_device_pause_media_on_calls,
+            set_device_notify_incoming_files,
             dismiss_notification,
             set_active_notification_device,
             copy_text_to_clipboard,

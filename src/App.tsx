@@ -747,6 +747,13 @@ export default function App() {
                                         enabled: !selectedDevice.pauseMediaOnCalls,
                                     })
                                 }
+                                notifyIncomingFiles={selectedDevice.notifyIncomingFiles}
+                                onToggleNotifyIncomingFiles={() =>
+                                    invoke("set_device_notify_incoming_files", {
+                                        deviceId: selectedDevice.deviceId,
+                                        enabled: !selectedDevice.notifyIncomingFiles,
+                                    })
+                                }
                                 onAddRunCommand={async (name, command) => {
                                     await invoke("add_device_run_command", {
                                         name,

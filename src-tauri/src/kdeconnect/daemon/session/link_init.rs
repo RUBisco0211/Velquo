@@ -59,6 +59,7 @@ impl KdeConnectDaemon {
             saved_sync_notifications,
             saved_auto_copy_otp,
             saved_pause_media_on_calls,
+            saved_notify_incoming_files,
             saved_save_location,
             saved_run_commands,
         ) = {
@@ -87,12 +88,14 @@ impl KdeConnectDaemon {
                     rec.sync_notifications,
                     rec.auto_copy_otp,
                     rec.pause_media_on_calls,
+                    rec.notify_incoming_files,
                     loc,
                     rec.run_commands.clone(),
                 )
             } else {
                 (
                     false,
+                    true,
                     true,
                     true,
                     true,
@@ -218,6 +221,7 @@ impl KdeConnectDaemon {
                         sync_notifications: saved_sync_notifications,
                         auto_copy_otp: saved_auto_copy_otp,
                         pause_media_on_calls: saved_pause_media_on_calls,
+                        notify_incoming_files: saved_notify_incoming_files,
                         save_location: saved_save_location,
                         notifications: prev_notifications,
                         run_commands: saved_run_commands,

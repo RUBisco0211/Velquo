@@ -25,6 +25,8 @@ interface DeviceSettingsViewProps {
     onToggleAutoCopyOtp: () => void;
     pauseMediaOnCalls: boolean;
     onTogglePauseMediaOnCalls: () => void;
+    notifyIncomingFiles: boolean;
+    onToggleNotifyIncomingFiles: () => void;
     runCommands: RunCommandItem[];
     onAddRunCommand: (name: string, command: string) => Promise<void>;
     onRemoveRunCommand: (key: string) => Promise<void>;
@@ -57,12 +59,14 @@ export function DeviceSettingsView({
     onRemoveRunCommand,
     rightPaneContainer,
     onToggleAutoCopyOtp,
+    notifyIncomingFiles,
     openAddCommandSignal,
     onToggleSyncClipboard,
     onToggleNotifications,
     onChangeFileSaveLocation,
     onConsumeAddCommandSignal,
     onTogglePauseMediaOnCalls,
+    onToggleNotifyIncomingFiles,
 }: DeviceSettingsViewProps) {
     const { t } = useTranslation();
     const [isCommandsModalOpen, setIsCommandsModalOpen] =
@@ -150,6 +154,44 @@ export function DeviceSettingsView({
                         {t("common.change")}
                     </motion.button>
                 </div>
+            </div>
+
+            {/* Notify on received files toggle */}
+            <div
+                onClick={onToggleNotifyIncomingFiles}
+                className="flex cursor-pointer items-center justify-between rounded-xl border border-black/12 bg-black/[0.02] px-3.5 py-2.5 transition-colors hover:border-black/20 dark:border-white/12 dark:bg-white/[0.02] dark:hover:border-white/20"
+            >
+                <span className="text-[13.5px] font-medium text-zinc-800 dark:text-zinc-100">
+                    {t("deviceSettings.notifyIncomingFiles")}
+                </span>
+
+                <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notifyIncomingFiles}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleNotifyIncomingFiles();
+                    }}
+                    className={`relative flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors duration-200 ${
+                        notifyIncomingFiles
+                            ? "bg-blue-600 dark:bg-blue-500"
+                            : "bg-zinc-300 dark:bg-zinc-700"
+                    }`}
+                >
+                    <motion.span
+                        layout
+                        transition={{
+                            damping: 34,
+                            type: "spring",
+                            stiffness: 560,
+                        }}
+                        animate={{
+                            x: notifyIncomingFiles ? 20 : 0,
+                        }}
+                        className="h-5 w-5 rounded-full bg-white shadow-sm"
+                    />
+                </button>
             </div>
 
             {/* Sync clipboard toggle */}

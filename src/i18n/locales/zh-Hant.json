@@ -117,6 +117,7 @@
         "syncNotifications": "同步通知",
         "autoCopyOtp": "自動複製驗證碼",
         "pauseMediaOnCalls": "通話時暫停媒體",
+        "notifyIncomingFiles": "收到檔案時通知",
         "unpair": "取消配對"
     },
     "files": {
@@ -184,7 +185,9 @@
             "files": "{{device}} — 檔案"
         },
         "notification": {
-            "dismiss": "忽略"
+            "dismiss": "忽略",
+            "fileReceivedTitle": "已收到檔案",
+            "fileReceiveFailedTitle": "檔案接收失敗"
         }
     },
     "homebrew": {

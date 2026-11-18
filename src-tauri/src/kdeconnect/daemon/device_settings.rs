@@ -170,6 +170,30 @@ impl KdeConnectDaemon {
         Ok(())
     }
 
+    pub fn set_device_notify_incoming_files(&self, device_id: &str, enabled: bool) -> Result<()> {
+        if let Ok(mut devices) = self.devices.lock() {
+            if let Some(entry) = devices.get_mut(device_id) {
+                entry.view.notify_incoming_files = enabled;
+                log::info!(
+                    "[share-in] Set notify_incoming_files={} for '{}' ({})",
+                    enabled,
+                    entry.view.device_name,
+                    device_id
+                );
+            }
+        }
+
+        {
+            let mut trusted = self.trusted_devices.lock().unwrap();
+            if let Some(rec) = trusted.get_mut(device_id) {
+                rec.notify_incoming_files = enabled;
+            }
+        }
+        self.save_trusted_devices();
+        self.notify_ui();
+        Ok(())
+    }
+
     pub fn set_device_save_location(&self, device_id: &str, save_location: &str) -> Result<()> {
         let trimmed = save_location.trim();
         let target_dir = if trimmed.is_empty() {

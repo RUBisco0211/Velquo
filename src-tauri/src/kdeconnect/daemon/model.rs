@@ -112,6 +112,7 @@ pub struct DeviceView {
     pub sync_notifications: bool,
     pub auto_copy_otp: bool,
     pub pause_media_on_calls: bool,
+    pub notify_incoming_files: bool,
     pub save_location: String,
     pub notifications: Vec<PhoneNotification>,
     pub run_commands: Vec<RunCommandItem>,
@@ -157,6 +158,10 @@ pub struct TrustedDeviceRecord {
     pub auto_copy_otp: bool,
     #[serde(default = "default_true")]
     pub pause_media_on_calls: bool,
+    /// Show a native notification when a file from this device finishes
+    /// arriving (or fails to arrive).
+    #[serde(default = "default_true")]
+    pub notify_incoming_files: bool,
     #[serde(default)]
     pub save_location: Option<String>,
     #[serde(default)]
@@ -248,5 +253,31 @@ impl DeviceEntry {
         self.view.pair_state = state;
         self.paired
             .store(state == PairState::Paired, Ordering::Release);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_trusted_device_records_keep_notifying_incoming_files() {
+        // `trusted_devices.json` written before the per-device file notification
+        // switch existed must keep the previous (silent, but now announced)
+        // behaviour instead of failing to parse.
+        let legacy = r#"{
+            "device_id": "abc123",
+            "device_name": "Phone",
+            "device_type": "phone",
+            "protocol_version": 8,
+            "cert_der": []
+        }"#;
+
+        let record: TrustedDeviceRecord = serde_json::from_str(legacy).unwrap();
+
+        assert!(record.notify_incoming_files);
+        assert!(record.sync_clipboard);
+        assert!(record.save_location.is_none());
+        assert!(record.run_commands.is_empty());
     }
 }

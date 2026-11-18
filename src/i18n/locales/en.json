@@ -118,6 +118,7 @@
         "syncNotifications": "Sync notifications",
         "autoCopyOtp": "Auto-copy OTPs",
         "pauseMediaOnCalls": "Pause media on calls",
+        "notifyIncomingFiles": "Notify on received files",
         "unpair": "Unpair"
     },
     "files": {
@@ -186,7 +187,9 @@
             "files": "{{device}} — Files"
         },
         "notification": {
-            "dismiss": "Dismiss"
+            "dismiss": "Dismiss",
+            "fileReceivedTitle": "File received",
+            "fileReceiveFailedTitle": "File transfer failed"
         }
     },
     "homebrew": {
